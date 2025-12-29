@@ -4,13 +4,14 @@ import com.konoec.polyworkapp.data.model.AttendanceResponse
 import com.konoec.polyworkapp.data.model.ReportJustificationRequest
 import com.konoec.polyworkapp.data.model.ReportJustificationResponse
 import io.ktor.client.call.body
+import io.ktor.client.request.forms.formData
+import io.ktor.client.request.forms.submitFormWithBinaryData
 import io.ktor.client.request.get
 import io.ktor.client.request.header
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.http.ContentType
+import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
-import io.ktor.http.contentType
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class AttendanceRemoteDataSource(
     private val baseUrl: String = ApiConfig.BASE_URL
@@ -26,12 +27,27 @@ class AttendanceRemoteDataSource(
 
     suspend fun submitJustification(
         token: String,
-        request: ReportJustificationRequest
+        request: ReportJustificationRequest,
+        imageBytes: ByteArray?
     ): ReportJustificationResponse {
-        return client.post("$baseUrl/attendance/report") {
+        return client.submitFormWithBinaryData(
+            url = "$baseUrl/attendance/report",
+            formData = formData {
+                // 1. Parte DATA: JSON serializado a String
+                append("data", Json.encodeToString(request), Headers.build {
+                    append(HttpHeaders.ContentType, "application/json")
+                })
+
+                // 2. Parte FILE: Binario (Solo si existe)
+                if (imageBytes != null) {
+                    append("file", imageBytes, Headers.build {
+                        append(HttpHeaders.ContentType, "image/jpeg")
+                        append(HttpHeaders.ContentDisposition, "filename=\"evidencia.jpg\"")
+                    })
+                }
+            }
+        ) {
             header(HttpHeaders.Authorization, "Bearer $token")
-            contentType(ContentType.Application.Json)
-            setBody(request)
         }.body()
     }
 

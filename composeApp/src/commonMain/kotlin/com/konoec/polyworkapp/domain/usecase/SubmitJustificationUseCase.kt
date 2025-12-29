@@ -8,10 +8,11 @@ class SubmitJustificationUseCase(
 ) {
     suspend operator fun invoke(
         attendanceId: String,
-        justification: String,
-        evidence: String?
+        description: String,
+        deviceId: String?,
+        imageBytes: ByteArray?
     ): Result<String> {
-        return attendanceRepository.submitJustification(attendanceId, justification, evidence)
+        return attendanceRepository.submitJustification(attendanceId, description, deviceId, imageBytes)
     }
 }
 

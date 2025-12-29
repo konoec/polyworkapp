@@ -6,6 +6,11 @@ import com.konoec.polyworkapp.domain.model.Result
 
 interface AttendanceRepository {
     suspend fun getAttendanceRecords(monthId: Int): Result<Pair<List<AttendanceRecord>, List<Month>>>
-    suspend fun submitJustification(attendanceId: String, justification: String, evidence: String?): Result<String>
+    suspend fun submitJustification(
+        attendanceId: String,
+        description: String,
+        deviceId: String?,
+        imageBytes: ByteArray?
+    ): Result<String>
 }
 

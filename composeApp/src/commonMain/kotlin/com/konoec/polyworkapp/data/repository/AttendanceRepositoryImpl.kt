@@ -81,19 +81,21 @@ class AttendanceRepositoryImpl(
 
     override suspend fun submitJustification(
         attendanceId: String,
-        justification: String,
-        evidence: String?
+        description: String,
+        deviceId: String?,
+        imageBytes: ByteArray?
     ): Result<String> {
         val token = localDataSource.getToken().firstOrNull()
             ?: return Result.Error("No token found")
 
         val request = ReportJustificationRequest(
             attendanceId = attendanceId,
-            justification = justification,
-            evidence = evidence
+            description = description,
+            deviceId = deviceId,
+            evidenceUrl = null // Se usa null cuando se envía archivo binario
         )
 
-        return when (val result = safeApiCall { remoteDataSource.submitJustification(token, request) }) {
+        return when (val result = safeApiCall { remoteDataSource.submitJustification(token, request, imageBytes) }) {
             is Result.Success -> {
                 val response = result.data
                 if (response.header.code == 200 && response.body.success) {

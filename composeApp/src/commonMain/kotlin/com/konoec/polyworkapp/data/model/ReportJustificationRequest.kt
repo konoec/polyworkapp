@@ -5,8 +5,9 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ReportJustificationRequest(
     val attendanceId: String,
-    val justification: String,
-    val evidence: String? // Base64 o URL del archivo adjunto
+    val description: String,
+    val deviceId: String? = null,
+    val evidenceUrl: String? = null
 )
 
 @Serializable
@@ -18,5 +19,6 @@ data class ReportJustificationResponse(
 @Serializable
 data class ReportJustificationBody(
     val success: Boolean,
-    val message: String
+    val message: String,
+    val reportId: String?
 )

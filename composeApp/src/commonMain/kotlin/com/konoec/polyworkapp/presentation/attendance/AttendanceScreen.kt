@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.konoec.polyworkapp.platform.rememberImagePicker
 import com.konoec.polyworkapp.presentation.components.PolyworkLoader
 import com.konoec.polyworkapp.presentation.theme.PolyworkTheme
 import kotlinx.datetime.toLocalDateTime
@@ -57,10 +58,6 @@ fun AttendanceScreen() {
         viewModel.effects.collect { effect ->
             when (effect) {
                 is AttendanceEffect.ShowSnackbar -> snackbarHostState.showSnackbar(effect.message)
-                is AttendanceEffect.OpenEvidencePicker -> {
-                    viewModel.onEvidenceSelected("evidencia_adjunta.pdf")
-                    snackbarHostState.showSnackbar("Archivo simulado adjuntado")
-                }
             }
         }
     }
@@ -203,7 +200,9 @@ fun AttendanceScreen() {
                     evidenceName = state.evidenceFileName,
                     isSubmitting = state.isSubmitting,
                     onTextChange = { viewModel.onJustificationChanged(it) },
-                    onUploadClick = { viewModel.onUploadEvidenceClick() },
+                    onEvidenceSelected = { fileName, bytes ->
+                        viewModel.onEvidenceSelected(fileName, bytes)
+                    },
                     onSubmit = { viewModel.submitReport() }
                 )
             }
@@ -385,9 +384,17 @@ fun TimelineFormContent(
     evidenceName: String?,
     isSubmitting: Boolean,
     onTextChange: (String) -> Unit,
-    onUploadClick: () -> Unit,
+    onEvidenceSelected: (fileName: String?, bytes: ByteArray?) -> Unit,
     onSubmit: () -> Unit
 ) {
+    val launchPicker = rememberImagePicker { bytes ->
+        if (bytes != null) {
+            onEvidenceSelected("evidencia.jpg", bytes)
+        } else {
+            onEvidenceSelected(null, null)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -447,7 +454,7 @@ fun TimelineFormContent(
                 }
                 .background(if (evidenceName != null) MaterialTheme.colorScheme.primary.copy(alpha=0.05f) else Color.Transparent, RoundedCornerShape(12.dp))
                 .clip(RoundedCornerShape(12.dp))
-                .clickable { onUploadClick() },
+                .clickable { launchPicker() },
             contentAlignment = Alignment.Center
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {

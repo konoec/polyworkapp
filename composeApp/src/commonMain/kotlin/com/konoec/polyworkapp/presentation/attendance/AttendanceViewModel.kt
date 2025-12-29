@@ -6,6 +6,7 @@ import com.konoec.polyworkapp.di.AppModule
 import com.konoec.polyworkapp.domain.model.Result
 import com.konoec.polyworkapp.domain.usecase.GetAttendanceRecordsUseCase
 import com.konoec.polyworkapp.domain.usecase.SubmitJustificationUseCase
+import com.konoec.polyworkapp.platform.DeviceInfo
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
 import com.konoec.polyworkapp.domain.model.AttendanceStatus as DomainAttendanceStatus
 
@@ -37,7 +39,7 @@ class AttendanceViewModel(
     private fun getCurrentMonth(): Int {
         val now = kotlin.time.Clock.System.now()
         val localDate = now.toLocalDateTime(TimeZone.currentSystemDefault())
-        return localDate.monthNumber
+        return localDate.month.number
     }
 
     private fun loadAttendance() {
@@ -136,18 +138,14 @@ class AttendanceViewModel(
         _state.update { it.copy(justificationText = text, errorMessage = null) }
     }
 
-    fun onUploadEvidenceClick() {
-        viewModelScope.launch {
-            _effects.send(
-                AttendanceEffect.OpenEvidencePicker(
-                    allowedMimeTypes = listOf("image/*", "application/pdf")
-                )
+    fun onEvidenceSelected(fileName: String?, bytes: ByteArray?) {
+        _state.update {
+            it.copy(
+                evidenceFileName = fileName,
+                evidenceBytes = bytes,
+                errorMessage = null
             )
         }
-    }
-
-    fun onEvidenceSelected(fileName: String?) {
-        _state.update { it.copy(evidenceFileName = fileName, errorMessage = null) }
     }
 
     fun submitReport() {
@@ -163,10 +161,14 @@ class AttendanceViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isSubmitting = true, errorMessage = null) }
 
+            val deviceId = DeviceInfo.getDeviceId()
+            val imageBytes = _state.value.evidenceBytes
+
             when (val result = submitJustificationUseCase(
                 attendanceId = currentItem.id,
-                justification = justification,
-                evidence = _state.value.evidenceFileName
+                description = justification,
+                deviceId = deviceId,
+                imageBytes = imageBytes
             )) {
                 is Result.Success -> {
                     _state.update {
@@ -176,6 +178,7 @@ class AttendanceViewModel(
                             selectedItem = null,
                             justificationText = "",
                             evidenceFileName = null,
+                            evidenceBytes = null,
                             errorMessage = null
                         )
                     }
