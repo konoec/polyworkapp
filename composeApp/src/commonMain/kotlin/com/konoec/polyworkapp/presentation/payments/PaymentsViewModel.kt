@@ -29,4 +29,8 @@ class PaymentsViewModel : ViewModel() {
             _state.update { it.copy(isLoading = false, payments = mockData) }
         }
     }
+
+    fun clearState() {
+        _state.value = PaymentsState()
+    }
 }

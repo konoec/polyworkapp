@@ -78,6 +78,13 @@ fun HomeScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // Recargar datos si el estado está vacío (después de logout y nuevo login)
+    LaunchedEffect(state.user) {
+        if (state.user == null && !state.isLoading && !state.sessionExpired) {
+            vm.refreshData()
+        }
+    }
+
     // Mostrar mensaje cuando cambia passwordChangeMessage
     LaunchedEffect(passwordChangeMessage) {
         passwordChangeMessage?.let { message ->

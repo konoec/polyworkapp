@@ -33,6 +33,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.konoec.polyworkapp.platform.rememberImagePicker
 import com.konoec.polyworkapp.presentation.components.PolyworkLoader
 import com.konoec.polyworkapp.presentation.theme.PolyworkTheme
+import com.konoec.polyworkapp.presentation.ViewModelRegistry
 import kotlinx.datetime.toLocalDateTime
 
 // --- PANTALLA PRINCIPAL ---
@@ -42,6 +43,16 @@ fun AttendanceScreen() {
     val viewModel: AttendanceViewModel = viewModel { AttendanceViewModel() }
     val state by viewModel.state.collectAsState()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Registrar el ViewModel para que pueda ser limpiado al hacer logout
+    LaunchedEffect(viewModel) {
+        ViewModelRegistry.registerAttendanceViewModel(viewModel)
+    }
+
+    // Recargar datos si el estado está vacío (después de logout y nuevo login)
+    LaunchedEffect(state.attendanceList) {
+        viewModel.reloadIfNeeded()
+    }
 
     val d = PolyworkTheme.dimens
 
@@ -216,12 +227,13 @@ fun AttendanceStreamItem(item: AttendanceItem, onActionClick: () -> Unit) {
     val statusColor = item.status.color
     val hasIssue = item.canReport
 
-    // Formatear fecha: "31/12/2025" -> día "31" y mes "DIC"
-    val (day, monthAbbr) = remember(item.date) {
+    val (day, monthAbbr, weekDay) = remember(item.date) {
         val parts = item.date.split("/")
-        if (parts.size >= 2) {
+        if (parts.size >= 3) {
             val dayStr = parts[0]
             val monthNum = parts[1].toIntOrNull() ?: 1
+            val yearNum = parts[2].toIntOrNull() ?: 2025
+
             val monthStr = when (monthNum) {
                 1 -> "ENE"
                 2 -> "FEB"
@@ -237,9 +249,26 @@ fun AttendanceStreamItem(item: AttendanceItem, onActionClick: () -> Unit) {
                 12 -> "DIC"
                 else -> "???"
             }
-            Pair(dayStr, monthStr)
+
+            // Calcular día de la semana
+            val weekDayStr = try {
+                val date = kotlinx.datetime.LocalDate(yearNum, monthNum, dayStr.toInt())
+                when (date.dayOfWeek) {
+                    kotlinx.datetime.DayOfWeek.MONDAY -> "LUN"
+                    kotlinx.datetime.DayOfWeek.TUESDAY -> "MAR"
+                    kotlinx.datetime.DayOfWeek.WEDNESDAY -> "MIÉ"
+                    kotlinx.datetime.DayOfWeek.THURSDAY -> "JUE"
+                    kotlinx.datetime.DayOfWeek.FRIDAY -> "VIE"
+                    kotlinx.datetime.DayOfWeek.SATURDAY -> "SÁB"
+                    kotlinx.datetime.DayOfWeek.SUNDAY -> "DOM"
+                }
+            } catch (_: Exception) {
+                ""
+            }
+
+            Triple(dayStr, monthStr, weekDayStr)
         } else {
-            Pair("??", "???")
+            Triple("??", "???", "")
         }
     }
 
@@ -253,6 +282,14 @@ fun AttendanceStreamItem(item: AttendanceItem, onActionClick: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.width(50.dp).padding(top = 0.dp)
         ) {
+            if (weekDay.isNotEmpty()) {
+                Text(
+                    text = weekDay,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Normal,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+            }
             Text(
                 text = day,
                 style = MaterialTheme.typography.headlineSmall,

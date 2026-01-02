@@ -14,6 +14,7 @@ import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -26,11 +27,23 @@ import com.konoec.polyworkapp.presentation.components.PolyworkLoader
 import com.konoec.polyworkapp.presentation.theme.PolyworkTheme
 import com.konoec.polyworkapp.presentation.util.extractDayFromDate
 import com.konoec.polyworkapp.presentation.util.isToday
+import com.konoec.polyworkapp.presentation.ViewModelRegistry
 
 @Composable
 fun ScheduleScreen() {
     val viewModel: ScheduleViewModel = viewModel { ScheduleViewModel() }
     val state by viewModel.state.collectAsState()
+
+    // Registrar el ViewModel para que pueda ser limpiado al hacer logout
+    LaunchedEffect(viewModel) {
+        ViewModelRegistry.registerScheduleViewModel(viewModel)
+    }
+
+    // Recargar datos si el estado está vacío (después de logout y nuevo login)
+    LaunchedEffect(state.shifts) {
+        viewModel.reloadIfNeeded()
+    }
+
     val d = PolyworkTheme.dimens
 
     if (state.isLoading) {

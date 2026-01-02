@@ -235,6 +235,21 @@ class AttendanceViewModel(
             else -> monthName.take(3).uppercase()
         }
     }
+
+    fun clearState() {
+        _state.value = AttendanceState()
+        currentMonthId = getCurrentMonth()
+    }
+
+    /**
+     * Recarga los registros de asistencia.
+     * Se debe llamar cuando se vuelve a la pantalla después de un logout/login.
+     */
+    fun reloadIfNeeded() {
+        if (_state.value.attendanceList.isEmpty() && !_state.value.isLoading) {
+            loadAttendance()
+        }
+    }
 }
 
 

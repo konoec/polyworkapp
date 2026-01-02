@@ -9,6 +9,7 @@ import com.konoec.polyworkapp.domain.usecase.GetActiveShiftUseCase
 import com.konoec.polyworkapp.domain.usecase.GetCurrentUserUseCase
 import com.konoec.polyworkapp.domain.usecase.GetStatsUseCase
 import com.konoec.polyworkapp.domain.usecase.LogoutUseCase
+import com.konoec.polyworkapp.presentation.ViewModelRegistry
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -93,6 +94,21 @@ class HomeViewModel(
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
 
+            // Recargar datos del usuario
+            val user = getCurrentUserUseCase()
+            if (user == null) {
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    error = "Error al cargar datos del usuario"
+                )
+                return@launch
+            }
+
+            _state.value = _state.value.copy(
+                user = user,
+                userName = user.name
+            )
+
             when (val shiftResult = getActiveShiftUseCase(forceRefresh = true)) {
                 is Result.Success -> {
                     _state.value = _state.value.copy(activeShift = shiftResult.data)
@@ -148,6 +164,10 @@ class HomeViewModel(
     fun logout() {
         viewModelScope.launch {
             logoutUseCase()
+            // Limpiar todos los ViewModels
+            ViewModelRegistry.clearAllViewModels()
+            // Limpiar el estado del ViewModel actual
+            _state.value = HomeState()
         }
     }
 }

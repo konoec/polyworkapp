@@ -59,6 +59,20 @@ class ScheduleViewModel(
     fun refreshSchedule() {
         loadSchedule()
     }
+
+    fun clearState() {
+        _state.value = ScheduleState()
+    }
+
+    /**
+     * Recarga los horarios si es necesario.
+     * Se debe llamar cuando se vuelve a la pantalla después de un logout/login.
+     */
+    fun reloadIfNeeded() {
+        if (_state.value.shifts.isEmpty() && !_state.value.isLoading) {
+            loadSchedule()
+        }
+    }
 }
 
 
