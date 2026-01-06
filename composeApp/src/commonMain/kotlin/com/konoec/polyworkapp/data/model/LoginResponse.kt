@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class LoginResponse(
-    val body: LoginBody,
+    val body: LoginBody? = null,
     val header: ResponseHeader
 )
 

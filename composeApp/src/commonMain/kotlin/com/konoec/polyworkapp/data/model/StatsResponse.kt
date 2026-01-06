@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class StatsResponse(
-    val body: StatsBody,
+    val body: StatsBody? = null,
     val header: ResponseHeader
 )
 

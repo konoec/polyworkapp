@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class ShiftResponse(
-    val body: ShiftBody,
+    val body: ShiftBody? = null,
     val header: ResponseHeader
 )
 

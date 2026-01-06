@@ -44,7 +44,7 @@ class HomeRepositoryImpl(
             is Result.Success -> {
                 val response = result.data
 
-                if (response.header.code == 200) {
+                if (response.header.code == 200 && response.body != null) {
                     val shiftData = response.body.shift
 
                     if (shiftData != null) {
@@ -97,7 +97,7 @@ class HomeRepositoryImpl(
         return when (val result = safeApiCall { remoteDataSource.getStats(token) }) {
             is Result.Success -> {
                 val response = result.data
-                if (response.header.code == 200) {
+                if (response.header.code == 200 && response.body != null) {
                     val stats = Stats(
                         diasLaborados = response.body.diasLaborados,
                         puntualidad = response.body.puntualidad

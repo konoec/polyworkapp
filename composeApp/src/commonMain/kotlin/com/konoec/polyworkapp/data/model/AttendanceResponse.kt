@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class AttendanceResponse(
-    val body: AttendanceBody,
+    val body: AttendanceBody? = null,
     val header: ResponseHeader
 )
 

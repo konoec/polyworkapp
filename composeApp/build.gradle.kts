@@ -1,4 +1,24 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
+
+// Cargar versión desde archivo de propiedades
+val versionPropsFile = rootProject.file("version.properties")
+val versionProps = Properties()
+if (versionPropsFile.exists()) {
+    versionProps.load(versionPropsFile.inputStream())
+}
+
+val versionMajor = versionProps.getProperty("VERSION_MAJOR", "1").toInt()
+val versionMinor = versionProps.getProperty("VERSION_MINOR", "0").toInt()
+val versionPatch = versionProps.getProperty("VERSION_PATCH", "0").toInt()
+val versionCode = versionProps.getProperty("VERSION_CODE", "1").toInt()
+val versionSuffix = versionProps.getProperty("VERSION_SUFFIX", "")
+
+val appVersionName = if (versionSuffix.isNotEmpty()) {
+    "$versionMajor.$versionMinor.$versionPatch-$versionSuffix"
+} else {
+    "$versionMajor.$versionMinor.$versionPatch"
+}
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -69,8 +89,8 @@ android {
         applicationId = "com.konoec.polyworkapp"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = versionCode
+        versionName = appVersionName
     }
     packaging {
         resources {

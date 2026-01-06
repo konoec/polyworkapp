@@ -85,11 +85,15 @@ class AttendanceViewModel(
                         )
                     }
 
+                    // Calcular resumen del periodo
+                    val summary = calculatePeriodSummary(attendanceItems)
+
                     _state.update {
                         it.copy(
                             isLoading = false,
                             attendanceList = attendanceItems,
-                            availableMonths = monthTabs
+                            availableMonths = monthTabs,
+                            periodSummary = summary
                         )
                     }
                 }
@@ -233,6 +237,30 @@ class AttendanceViewModel(
             "diciembre" -> "DIC"
             else -> monthName.take(3).uppercase()
         }
+    }
+
+    private fun calculatePeriodSummary(items: List<AttendanceItem>): PeriodSummary {
+        var asistencias = 0
+        var tardanzas = 0
+        var faltas = 0
+        var enProceso = 0
+
+        items.forEach { item ->
+            when (item.status) {
+                AttendanceStatus.ASISTENCIA -> asistencias++
+                AttendanceStatus.TARDANZA -> tardanzas++
+                AttendanceStatus.FALTA -> faltas++
+                AttendanceStatus.PROCESO -> enProceso++
+            }
+        }
+
+        return PeriodSummary(
+            totalDays = items.size,
+            asistencias = asistencias,
+            tardanzas = tardanzas,
+            faltas = faltas,
+            enProceso = enProceso
+        )
     }
 
     /**

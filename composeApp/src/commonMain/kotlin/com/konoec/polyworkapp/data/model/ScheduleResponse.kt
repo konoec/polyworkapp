@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class ScheduleResponse(
-    val body: ScheduleBody,
+    val body: ScheduleBody? = null,
     val header: ResponseHeader
 )
 

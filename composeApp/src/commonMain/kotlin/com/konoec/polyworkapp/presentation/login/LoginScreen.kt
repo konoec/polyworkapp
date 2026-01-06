@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.konoec.polyworkapp.presentation.theme.PolyworkTheme
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.konoec.polyworkapp.AppVersion
 
 @Composable
 fun LoginScreen(
@@ -245,6 +246,15 @@ fun LoginScreen(
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(8.dp) // Aumentar área táctil
+                    )
+
+                    // Versión de la app
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Text(
+                        text = "Versión ${AppVersion.VERSION_NAME}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        textAlign = TextAlign.Center
                     )
                 }
 

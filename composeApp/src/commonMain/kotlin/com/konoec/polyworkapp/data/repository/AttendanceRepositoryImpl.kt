@@ -25,7 +25,7 @@ class AttendanceRepositoryImpl(
         return when (val result = safeApiCall { remoteDataSource.getAttendanceRecords(token, monthId, year) }) {
             is Result.Success -> {
                 val response = result.data
-                if (response.header.code == 200) {
+                if (response.header.code == 200 && response.body != null) {
                     val records = response.body.records.map { recordData ->
                         AttendanceRecord(
                             id = recordData.id,

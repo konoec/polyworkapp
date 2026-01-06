@@ -20,7 +20,7 @@ class ScheduleRepositoryImpl(
         return when (val result = safeApiCall { remoteDataSource.getSchedule(token) }) {
             is Result.Success -> {
                 val response = result.data
-                if (response.header.code == 200) {
+                if (response.header.code == 200 && response.body != null) {
                     val shifts = response.body.shifts.map { shiftData ->
                         ScheduleShift(
                             day = shiftData.day,

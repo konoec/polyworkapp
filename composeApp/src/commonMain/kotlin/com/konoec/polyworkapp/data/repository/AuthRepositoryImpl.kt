@@ -26,7 +26,7 @@ class AuthRepositoryImpl(
                 val response = result.data
 
                 // Verificar el código de la respuesta
-                if (response.header.code == 200) {
+                if (response.header.code == 200 && response.body != null) {
                     val token = response.body.token
                     val payload = JwtDecoder.decodePayload(token)
 
@@ -50,7 +50,7 @@ class AuthRepositoryImpl(
                         Result.Error("Error al procesar la respuesta del servidor")
                     }
                 } else {
-                    // Manejar errores que vienen en el response normal (código != 200)
+                    // Manejar errores que vienen en el response normal (código != 200 o body null)
                     Result.Error(response.header.message)
                 }
             }

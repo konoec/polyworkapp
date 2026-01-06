@@ -1,24 +1,19 @@
 package com.konoec.polyworkapp.presentation.attendance
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.rounded.AccessTime
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -92,22 +87,33 @@ fun AttendanceScreen() {
                 if (state.attendanceList.isEmpty()) {
                     EmptyStateContent(d.screenPadding)
                 } else {
-                    LazyColumn(
+                    Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .widthIn(max = d.maxContentWidth),
-                        contentPadding = PaddingValues(
-                            start = d.screenPadding,
-                            end = d.screenPadding,
-                            top = 16.dp,
-                            bottom = 80.dp
-                        )
+                            .widthIn(max = d.maxContentWidth)
                     ) {
-                        items(state.attendanceList) { item ->
-                            AttendanceStreamItem(
-                                item = item,
-                                onActionClick = { viewModel.openReportSheet(item) }
+                        // Resumen del periodo
+                        PeriodSummaryCard(
+                            summary = state.periodSummary,
+                            screenPadding = d.screenPadding
+                        )
+
+                        // Lista de asistencias
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                start = d.screenPadding,
+                                end = d.screenPadding,
+                                top = 16.dp,
+                                bottom = 80.dp
                             )
+                        ) {
+                            items(state.attendanceList) { item ->
+                                AttendanceStreamItem(
+                                    item = item,
+                                    onActionClick = { viewModel.openReportSheet(item) }
+                                )
+                            }
                         }
                     }
                 }
@@ -137,10 +143,6 @@ fun AttendanceScreen() {
     }
 }
 
-// ==========================================
-// --- UI COMPONENTS ---
-// ==========================================
-
 @Composable
 fun AttendanceTopBar(
     selectedYear: Int,
@@ -150,162 +152,213 @@ fun AttendanceTopBar(
     onMonthSelected: (Int) -> Unit,
     screenPadding: Dp
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 2.dp,
-        shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
-        modifier = Modifier.fillMaxWidth()
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        Column(
+        // Row de Título y Selector de Año
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(bottom = 16.dp)
+                .padding(horizontal = screenPadding, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Row 1: Title & Year
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = screenPadding, vertical = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
+            Text(
+                text = "Mis Asistencias",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Black
+            )
+
+            // Selector Real
+            var expanded by remember { mutableStateOf(false) }
+            Box {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { expanded = true }
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = "Mis Asistencias",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Black,
-                        color = MaterialTheme.colorScheme.onSurface
+                        text = selectedYear.toString(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
                     )
-                    Text(
-                        text = "Historial administrativo",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    Icon(
+                        imageVector = Icons.Rounded.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
 
-                CompactYearSelector(
-                    years = availableYears,
-                    selectedYear = selectedYear,
-                    onYearSelected = onYearSelected
-                )
-            }
-
-            // Row 2: Month Chips
-            MonthScrollableSelector(
-                months = availableMonths,
-                onMonthSelected = onMonthSelected,
-                screenPadding = screenPadding
-            )
-        }
-    }
-}
-
-@Composable
-fun CompactYearSelector(
-    years: List<Int>,
-    selectedYear: Int,
-    onYearSelected: (Int) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Box {
-        AssistChip(
-            onClick = { expanded = true },
-            label = {
-                Text(
-                    text = selectedYear.toString(),
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            trailingIcon = {
-                Icon(
-                    if (expanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
-            },
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-            colors = AssistChipDefaults.assistChipColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                labelColor = MaterialTheme.colorScheme.onSurface
-            ),
-            shape = RoundedCornerShape(50)
-        )
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer)
-        ) {
-            years.forEach { year ->
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = year.toString(),
-                            fontWeight = if (year == selectedYear) FontWeight.Bold else FontWeight.Normal,
-                            color = if (year == selectedYear) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                ) {
+                    availableYears.forEach { year ->
+                        DropdownMenuItem(
+                            text = { Text(year.toString()) },
+                            onClick = {
+                                onYearSelected(year)
+                                expanded = false
+                            }
                         )
-                    },
-                    onClick = {
-                        onYearSelected(year)
-                        expanded = false
                     }
-                )
+                }
             }
         }
-    }
-}
 
-@Composable
-fun MonthScrollableSelector(
-    months: List<MonthTab>,
-    onMonthSelected: (Int) -> Unit,
-    screenPadding: Dp
-) {
-    val listState = rememberLazyListState()
-
-    LaunchedEffect(months) {
-        val selectedIndex = months.indexOfFirst { it.isSelected }
-        if (selectedIndex >= 0) {
-            listState.animateScrollToItem(
-                index = selectedIndex,
-                scrollOffset = -100
-            )
-        }
-    }
-
-    LazyRow(
-        state = listState,
-        contentPadding = PaddingValues(horizontal = screenPadding),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(months) { month ->
-            val isSelected = month.isSelected
-
-            Surface(
-                onClick = { onMonthSelected(month.id) },
-                shape = RoundedCornerShape(50),
-                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
-                border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                modifier = Modifier.height(36.dp)
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.padding(horizontal = 16.dp)
+        // Selector de meses tipo "Tab" minimalista
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = screenPadding),
+            horizontalArrangement = Arrangement.spacedBy(20.dp),
+            modifier = Modifier.padding(vertical = 8.dp)
+        ) {
+            items(availableMonths) { month ->
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.clickable { onMonthSelected(month.id) }
                 ) {
                     Text(
                         text = month.name,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = if (month.isSelected) FontWeight.Bold else FontWeight.Normal,
+                        color = if (month.isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (month.isSelected) {
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 4.dp)
+                                .size(4.dp)
+                                .background(MaterialTheme.colorScheme.primary, CircleShape)
+                        )
+                    }
                 }
             }
         }
     }
 }
 
+@Composable
+fun PeriodSummaryCard(
+    summary: PeriodSummary,
+    screenPadding: Dp
+) {
+    // Diseño tipo "Dashboard de una sola línea"
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = screenPadding, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val stats = listOf(
+            Triple(summary.asistencias, "Asistió", AttendanceStatus.ASISTENCIA.color),
+            Triple(summary.tardanzas, "Tarde", AttendanceStatus.TARDANZA.color),
+            Triple(summary.faltas, "Faltas", AttendanceStatus.FALTA.color),
+            Triple(summary.enProceso, "En Proceso", Color(0xFF60A5FA))
+        )
+
+        stats.forEach { (count, label, color) ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.size(8.dp).background(color, CircleShape))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "$count",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.width(2.dp))
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AttendanceStreamItem(item: AttendanceItem, onActionClick: () -> Unit) {
+    // Determinar el color según el estado
+    val statusColor = when (item.status) {
+        AttendanceStatus.ASISTENCIA -> Color(0xFF4ADE80) // Verde
+        AttendanceStatus.TARDANZA -> Color(0xFFFACC15)   // Amarillo
+        AttendanceStatus.FALTA -> Color(0xFFEF4444)      // Rojo
+        AttendanceStatus.PROCESO -> Color(0xFF60A5FA)    // Azul
+    }
+
+    // Mostrar "Resolver" solo para tardanza, falta o proceso
+    val shouldShowResolve = item.canReport && (
+        item.status == AttendanceStatus.TARDANZA ||
+        item.status == AttendanceStatus.FALTA ||
+        item.status == AttendanceStatus.PROCESO
+    )
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Fecha Minimalista
+        Column(modifier = Modifier.width(45.dp)) {
+            Text(
+                text = item.date.split("/")[0], // Solo el día
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Light
+            )
+            Text(
+                text = "LUN", // Deberías pasar el día de la semana calculado
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        // Línea de tiempo sutil con color según estado
+        Box(
+            modifier = Modifier
+                .padding(horizontal = 12.dp)
+                .size(2.dp, 40.dp)
+                .background(statusColor)
+        )
+
+        // Información de marcación
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "${item.realIn ?: "--"} — ${item.realOut ?: "--"}",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                if (shouldShowResolve) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(modifier = Modifier.size(6.dp).background(statusColor, CircleShape))
+                }
+            }
+            Text(
+                text = "Horario: ${item.scheduledTime}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        // Estado o botón de acción
+        if (shouldShowResolve) {
+            TextButton(onClick = onActionClick) {
+                Text("Resolver", style = MaterialTheme.typography.labelLarge, color = Color(0xFFEF4444))
+            }
+        }
+        // Si es asistencia perfecta, no mostrar nada (queda limpio)
+    }
+}
 @Composable
 fun EmptyStateContent(screenPadding: Dp) {
     Box(
@@ -336,181 +389,6 @@ fun EmptyStateContent(screenPadding: Dp) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center
             )
-        }
-    }
-}
-
-@Composable
-fun AttendanceStreamItem(item: AttendanceItem, onActionClick: () -> Unit) {
-    val statusColor = item.status.color
-    val hasIssue = item.canReport
-
-    val (day, monthAbbr, weekDay) = remember(item.date) {
-        val parts = item.date.split("/")
-        if (parts.size >= 3) {
-            val dayStr = parts[0]
-            val monthNum = parts[1].toIntOrNull() ?: 1
-            val yearNum = parts[2].toIntOrNull() ?: 2025
-
-            val monthStr = when (monthNum) {
-                1 -> "ENE" 2 -> "FEB" 3 -> "MAR" 4 -> "ABR" 5 -> "MAY" 6 -> "JUN"
-                7 -> "JUL" 8 -> "AGO" 9 -> "SEP" 10 -> "OCT" 11 -> "NOV" 12 -> "DIC"
-                else -> "???"
-            }
-
-            val weekDayStr = try {
-                val date = kotlinx.datetime.LocalDate(yearNum, monthNum, dayStr.toInt())
-                when (date.dayOfWeek) {
-                    kotlinx.datetime.DayOfWeek.MONDAY -> "LUN"
-                    kotlinx.datetime.DayOfWeek.TUESDAY -> "MAR"
-                    kotlinx.datetime.DayOfWeek.WEDNESDAY -> "MIÉ"
-                    kotlinx.datetime.DayOfWeek.THURSDAY -> "JUE"
-                    kotlinx.datetime.DayOfWeek.FRIDAY -> "VIE"
-                    kotlinx.datetime.DayOfWeek.SATURDAY -> "SÁB"
-                    kotlinx.datetime.DayOfWeek.SUNDAY -> "DOM"
-                }
-            } catch (_: Exception) { "" }
-
-            Triple(dayStr, monthStr, weekDayStr)
-        } else {
-            Triple("??", "???", "")
-        }
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.width(50.dp).padding(top = 0.dp)
-        ) {
-            if (weekDay.isNotEmpty()) {
-                Text(
-                    text = weekDay,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Normal,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                )
-            }
-            Text(
-                text = day,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Light,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = monthAbbr,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.width(32.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .padding(top = 6.dp)
-                    .size(12.dp)
-                    .background(MaterialTheme.colorScheme.background)
-                    .border(2.dp, statusColor, CircleShape)
-            )
-            Box(
-                modifier = Modifier
-                    .width(2.dp)
-                    .fillMaxHeight()
-                    .background(
-                        if (hasIssue) statusColor.copy(alpha = 0.3f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
-                    )
-            )
-        }
-
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(bottom = 40.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Rounded.AccessTime,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(14.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "Turno: ${item.scheduledTime}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = item.realIn ?: "--:--",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = if (item.realIn == null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-                )
-
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.outlineVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp).size(16.dp)
-                )
-
-                Text(
-                    text = item.realOut ?: "--:--",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = if (item.realOut == null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    color = statusColor.copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(6.dp)
-                ) {
-                    Text(
-                        text = item.status.label.uppercase(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = statusColor,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-
-                if (hasIssue) {
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Surface(
-                        color = Color.Transparent,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f)),
-                        shape = RoundedCornerShape(6.dp),
-                        onClick = onActionClick
-                    ) {
-                        Text(
-                            text = "Justificar",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.error,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-            }
         }
     }
 }
