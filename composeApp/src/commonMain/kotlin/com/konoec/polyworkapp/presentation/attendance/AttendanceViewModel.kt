@@ -29,10 +29,12 @@ class AttendanceViewModel(
     private val _effects = Channel<AttendanceEffect>(capacity = Channel.BUFFERED)
     val effects = _effects.receiveAsFlow()
 
-    // Obtener el mes actual dinámicamente
     private var currentMonthId: Int = getCurrentMonth()
+    private var currentYear: Int = getCurrentYear()
 
     init {
+        val years = generateYearsList()
+        _state.update { it.copy(availableYears = years, selectedYear = currentYear) }
         loadAttendance()
     }
 
@@ -42,13 +44,24 @@ class AttendanceViewModel(
         return localDate.month.number
     }
 
-    private fun loadAttendance() {
+    private fun getCurrentYear(): Int {
+        val now = kotlin.time.Clock.System.now()
+        val localDate = now.toLocalDateTime(TimeZone.currentSystemDefault())
+        return localDate.year
+    }
+
+    private fun generateYearsList(): List<Int> {
+        val currentYear = getCurrentYear()
+        return (2017..currentYear).toList()
+    }
+
+    fun loadAttendance() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, errorMessage = null) }
 
-            when (val result = getAttendanceRecordsUseCase(currentMonthId)) {
+            when (val result = getAttendanceRecordsUseCase(currentMonthId, currentYear)) {
                 is Result.Success -> {
-                    val (records, months) = result.data
+                    val (records, monthsData) = result.data
 
                     val attendanceItems = records.map { record ->
                         AttendanceItem(
@@ -62,12 +75,13 @@ class AttendanceViewModel(
                         )
                     }
 
-                    val monthTabs = months.map { month ->
+                    // Mapeamos los Tabs del dominio a MonthTab
+                    val monthTabs = monthsData.map { tab ->
                         MonthTab(
-                            id = month.id,
-                            name = abbreviateMonth(month.name),
-                            year = month.year,
-                            isSelected = month.id == currentMonthId
+                            id = tab.id,
+                            name = abbreviateMonth(tab.name),
+                            year = currentYear.toString(),
+                            isSelected = tab.id == currentMonthId
                         )
                     }
 
@@ -80,43 +94,34 @@ class AttendanceViewModel(
                     }
                 }
                 is Result.Error -> {
-                    if (result.isAuthError) {
-                        _state.update {
-                            it.copy(
-                                isLoading = false,
-                                sessionExpired = true,
-                                errorMessage = result.message
-                            )
-                        }
-                    } else {
-                        _state.update {
-                            it.copy(
-                                isLoading = false,
-                                errorMessage = result.message
-                            )
-                        }
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            sessionExpired = result.isAuthError,
+                            errorMessage = result.message
+                        )
                     }
                 }
             }
         }
     }
 
-    // --- LÓGICA DE SELECCIÓN DE MES ---
     fun selectMonth(selectedId: Int) {
         currentMonthId = selectedId
-
-        // Actualizamos la lista para marcar cual está seleccionado
+        // Actualizamos visualmente la selección antes de cargar
         val updatedMonths = _state.value.availableMonths.map {
             it.copy(isSelected = it.id == selectedId)
         }
-
         _state.update { it.copy(availableMonths = updatedMonths) }
-
-        // Recargamos la asistencia con el nuevo mes
         loadAttendance()
     }
 
-    // --- LÓGICA DEL FORMULARIO ---
+    fun selectYear(year: Int) {
+        currentYear = year
+        _state.update { it.copy(selectedYear = year) }
+        loadAttendance()
+    }
+
     fun openReportSheet(item: AttendanceItem) {
         if (!item.canReport) return
         _state.update {
@@ -149,10 +154,9 @@ class AttendanceViewModel(
     }
 
     fun submitReport() {
-        val currentItem = _state.value.selectedItem
-        if (currentItem == null) return
-
+        val currentItem = _state.value.selectedItem ?: return
         val justification = _state.value.justificationText.trim()
+
         if (justification.isEmpty()) {
             _state.update { it.copy(errorMessage = "Ingresa el motivo/explicación.") }
             return
@@ -183,29 +187,24 @@ class AttendanceViewModel(
                         )
                     }
                     _effects.send(AttendanceEffect.ShowSnackbar(result.data))
-                    // Recargar la lista para reflejar cambios
                     loadAttendance()
                 }
                 is Result.Error -> {
-                    if (result.isAuthError) {
-                        _state.update {
-                            it.copy(
-                                isSubmitting = false,
-                                isSheetOpen = false,
-                                sessionExpired = true,
-                                errorMessage = result.message
-                            )
-                        }
-                    } else {
-                        _state.update {
-                            it.copy(
-                                isSubmitting = false,
-                                errorMessage = result.message
-                            )
-                        }
+                    _state.update {
+                        it.copy(
+                            isSubmitting = false,
+                            sessionExpired = result.isAuthError,
+                            errorMessage = result.message
+                        )
                     }
                 }
             }
+        }
+    }
+
+    fun reloadIfNeeded() {
+        if (_state.value.attendanceList.isEmpty() && !_state.value.isLoading) {
+            loadAttendance()
         }
     }
 
@@ -236,22 +235,14 @@ class AttendanceViewModel(
         }
     }
 
+    /**
+     * Limpia el estado del ViewModel.
+     * Se debe llamar al hacer logout.
+     */
     fun clearState() {
         _state.value = AttendanceState()
         currentMonthId = getCurrentMonth()
-    }
-
-    /**
-     * Recarga los registros de asistencia.
-     * Se debe llamar cuando se vuelve a la pantalla después de un logout/login.
-     */
-    fun reloadIfNeeded() {
-        if (_state.value.attendanceList.isEmpty() && !_state.value.isLoading) {
-            loadAttendance()
-        }
+        currentYear = getCurrentYear()
     }
 }
-
-
-
 

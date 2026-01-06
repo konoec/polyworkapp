@@ -5,7 +5,7 @@ object ApiConfig {
     // Para desarrollo local: "http://10.0.2.2:8080" (Android Emulator)
     // Para dispositivo físico: "http://192.168.0.96:8080"
     // Para producción: "https://api.tudominio.com"
-    const val BASE_URL = "http://147.182.235.237:8080/polybags/rest/workapp"
+    const val BASE_URL = "http://192.168.0.164:8080/polybags/rest/workapp"
 
     // Timeouts en milisegundos
     const val CONNECT_TIMEOUT = 30_000L

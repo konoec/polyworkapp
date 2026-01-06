@@ -19,8 +19,8 @@ class AttendanceRemoteDataSource(
 
     private val client = HttpClientFactory.create()
 
-    suspend fun getAttendanceRecords(token: String, monthId: Int): AttendanceResponse {
-        return client.get("$baseUrl/attendance?monthId=$monthId") {
+    suspend fun getAttendanceRecords(token: String, monthId: Int, year: Int): AttendanceResponse {
+        return client.get("$baseUrl/attendance?monthId=$monthId&year=$year") {
             header(HttpHeaders.Authorization, "Bearer $token")
         }.body()
     }

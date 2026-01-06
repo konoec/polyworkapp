@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -16,6 +17,8 @@ import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.rounded.AccessTime
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -28,15 +31,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.konoec.polyworkapp.platform.rememberImagePicker
 import com.konoec.polyworkapp.presentation.components.PolyworkLoader
 import com.konoec.polyworkapp.presentation.theme.PolyworkTheme
 import com.konoec.polyworkapp.presentation.ViewModelRegistry
-import kotlinx.datetime.toLocalDateTime
 
-// --- PANTALLA PRINCIPAL ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AttendanceScreen() {
@@ -44,25 +47,15 @@ fun AttendanceScreen() {
     val state by viewModel.state.collectAsState()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    // Registrar el ViewModel para que pueda ser limpiado al hacer logout
     LaunchedEffect(viewModel) {
         ViewModelRegistry.registerAttendanceViewModel(viewModel)
     }
 
-    // Recargar datos si el estado está vacío (después de logout y nuevo login)
     LaunchedEffect(state.attendanceList) {
         viewModel.reloadIfNeeded()
     }
 
     val d = PolyworkTheme.dimens
-
-    // Obtener año actual
-    val currentYear = remember {
-        val now = kotlin.time.Clock.System.now()
-        now.toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault()).year
-    }
-
-    // Host para Snackbars
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
@@ -77,61 +70,14 @@ fun AttendanceScreen() {
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.TopCenter
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .widthIn(max = d.maxContentWidth)
-                        .padding(top = d.screenPadding, bottom = 10.dp)
-                ) {
-                    Text(
-                        text = "Mi Cronología",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Black,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(horizontal = d.screenPadding)
-                    )
-                    Text(
-                        text = "Registro mensual del periodo $currentYear",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = d.screenPadding)
-                    )
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = d.screenPadding),
-                        horizontalArrangement = Arrangement.spacedBy(24.dp)
-                    ) {
-                        items(state.availableMonths) { month ->
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.clickable(
-                                    interactionSource = null,
-                                    indication = null
-                                ) { viewModel.selectMonth(month.id) }
-                            ) {
-                                Text(
-                                    text = month.name,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = if (month.isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (month.isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                if (month.isSelected) {
-                                    Box(modifier = Modifier.size(4.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
-                                } else {
-                                    Box(modifier = Modifier.size(4.dp))
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            AttendanceTopBar(
+                selectedYear = state.selectedYear,
+                availableYears = state.availableYears,
+                availableMonths = state.availableMonths,
+                onYearSelected = { viewModel.selectYear(it) },
+                onMonthSelected = { viewModel.selectMonth(it) },
+                screenPadding = d.screenPadding
+            )
         }
     ) { paddingValues ->
         if (state.isLoading) {
@@ -144,36 +90,7 @@ fun AttendanceScreen() {
                 contentAlignment = Alignment.TopCenter
             ) {
                 if (state.attendanceList.isEmpty()) {
-                    // Mensaje cuando no hay asistencias
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(horizontal = d.screenPadding)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.AccessTime,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                modifier = Modifier.size(64.dp)
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "Sin registros de asistencia",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "No hay asistencias registradas para este mes",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
+                    EmptyStateContent(d.screenPadding)
                 } else {
                     LazyColumn(
                         modifier = Modifier
@@ -182,7 +99,7 @@ fun AttendanceScreen() {
                         contentPadding = PaddingValues(
                             start = d.screenPadding,
                             end = d.screenPadding,
-                            top = 20.dp,
+                            top = 16.dp,
                             bottom = 80.dp
                         )
                     ) {
@@ -204,7 +121,6 @@ fun AttendanceScreen() {
                 containerColor = MaterialTheme.colorScheme.surface,
                 dragHandle = { BottomSheetDefaults.DragHandle() }
             ) {
-                // AQUÍ LLAMAMOS AL FORMULARIO QUE FALTABA
                 TimelineFormContent(
                     item = state.selectedItem!!,
                     justification = state.justificationText,
@@ -221,7 +137,209 @@ fun AttendanceScreen() {
     }
 }
 
-// --- ITEM DE LISTA (TIMELINE STREAM) ---
+// ==========================================
+// --- UI COMPONENTS ---
+// ==========================================
+
+@Composable
+fun AttendanceTopBar(
+    selectedYear: Int,
+    availableYears: List<Int>,
+    availableMonths: List<MonthTab>,
+    onYearSelected: (Int) -> Unit,
+    onMonthSelected: (Int) -> Unit,
+    screenPadding: Dp
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 2.dp,
+        shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(bottom = 16.dp)
+        ) {
+            // Row 1: Title & Year
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = screenPadding, vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Mis Asistencias",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Historial administrativo",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                CompactYearSelector(
+                    years = availableYears,
+                    selectedYear = selectedYear,
+                    onYearSelected = onYearSelected
+                )
+            }
+
+            // Row 2: Month Chips
+            MonthScrollableSelector(
+                months = availableMonths,
+                onMonthSelected = onMonthSelected,
+                screenPadding = screenPadding
+            )
+        }
+    }
+}
+
+@Composable
+fun CompactYearSelector(
+    years: List<Int>,
+    selectedYear: Int,
+    onYearSelected: (Int) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        AssistChip(
+            onClick = { expanded = true },
+            label = {
+                Text(
+                    text = selectedYear.toString(),
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            trailingIcon = {
+                Icon(
+                    if (expanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+            },
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            colors = AssistChipDefaults.assistChipColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                labelColor = MaterialTheme.colorScheme.onSurface
+            ),
+            shape = RoundedCornerShape(50)
+        )
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainer)
+        ) {
+            years.forEach { year ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = year.toString(),
+                            fontWeight = if (year == selectedYear) FontWeight.Bold else FontWeight.Normal,
+                            color = if (year == selectedYear) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    },
+                    onClick = {
+                        onYearSelected(year)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MonthScrollableSelector(
+    months: List<MonthTab>,
+    onMonthSelected: (Int) -> Unit,
+    screenPadding: Dp
+) {
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(months) {
+        val selectedIndex = months.indexOfFirst { it.isSelected }
+        if (selectedIndex >= 0) {
+            listState.animateScrollToItem(
+                index = selectedIndex,
+                scrollOffset = -100
+            )
+        }
+    }
+
+    LazyRow(
+        state = listState,
+        contentPadding = PaddingValues(horizontal = screenPadding),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(months) { month ->
+            val isSelected = month.isSelected
+
+            Surface(
+                onClick = { onMonthSelected(month.id) },
+                shape = RoundedCornerShape(50),
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
+                border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                modifier = Modifier.height(36.dp)
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                ) {
+                    Text(
+                        text = month.name,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun EmptyStateContent(screenPadding: Dp) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(horizontal = screenPadding)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.AccessTime,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(64.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Sin registros de asistencia",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "No hay asistencias registradas para este periodo",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
 @Composable
 fun AttendanceStreamItem(item: AttendanceItem, onActionClick: () -> Unit) {
     val statusColor = item.status.color
@@ -235,22 +353,11 @@ fun AttendanceStreamItem(item: AttendanceItem, onActionClick: () -> Unit) {
             val yearNum = parts[2].toIntOrNull() ?: 2025
 
             val monthStr = when (monthNum) {
-                1 -> "ENE"
-                2 -> "FEB"
-                3 -> "MAR"
-                4 -> "ABR"
-                5 -> "MAY"
-                6 -> "JUN"
-                7 -> "JUL"
-                8 -> "AGO"
-                9 -> "SEP"
-                10 -> "OCT"
-                11 -> "NOV"
-                12 -> "DIC"
+                1 -> "ENE" 2 -> "FEB" 3 -> "MAR" 4 -> "ABR" 5 -> "MAY" 6 -> "JUN"
+                7 -> "JUL" 8 -> "AGO" 9 -> "SEP" 10 -> "OCT" 11 -> "NOV" 12 -> "DIC"
                 else -> "???"
             }
 
-            // Calcular día de la semana
             val weekDayStr = try {
                 val date = kotlinx.datetime.LocalDate(yearNum, monthNum, dayStr.toInt())
                 when (date.dayOfWeek) {
@@ -262,9 +369,7 @@ fun AttendanceStreamItem(item: AttendanceItem, onActionClick: () -> Unit) {
                     kotlinx.datetime.DayOfWeek.SATURDAY -> "SÁB"
                     kotlinx.datetime.DayOfWeek.SUNDAY -> "DOM"
                 }
-            } catch (_: Exception) {
-                ""
-            }
+            } catch (_: Exception) { "" }
 
             Triple(dayStr, monthStr, weekDayStr)
         } else {
@@ -277,7 +382,6 @@ fun AttendanceStreamItem(item: AttendanceItem, onActionClick: () -> Unit) {
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
     ) {
-        // 1. FECHA
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.width(50.dp).padding(top = 0.dp)
@@ -304,7 +408,6 @@ fun AttendanceStreamItem(item: AttendanceItem, onActionClick: () -> Unit) {
             )
         }
 
-        // 2. LÍNEA
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.width(32.dp)
@@ -326,7 +429,6 @@ fun AttendanceStreamItem(item: AttendanceItem, onActionClick: () -> Unit) {
             )
         }
 
-        // 3. CONTENIDO
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -413,7 +515,6 @@ fun AttendanceStreamItem(item: AttendanceItem, onActionClick: () -> Unit) {
     }
 }
 
-// --- FORMULARIO WIZARD (ESTO ERA LO QUE FALTABA) ---
 @Composable
 fun TimelineFormContent(
     item: AttendanceItem,

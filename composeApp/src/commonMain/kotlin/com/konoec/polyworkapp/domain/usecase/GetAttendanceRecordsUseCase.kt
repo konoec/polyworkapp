@@ -8,7 +8,7 @@ import com.konoec.polyworkapp.domain.model.AttendanceRecord
 class GetAttendanceRecordsUseCase(
     private val attendanceRepository: AttendanceRepository
 ) {
-    suspend operator fun invoke(monthId: Int): Result<Pair<List<AttendanceRecord>, List<Month>>> {
-        return attendanceRepository.getAttendanceRecords(monthId)
+    suspend operator fun invoke(monthId: Int, year: Int): Result<Pair<List<AttendanceRecord>, List<Month>>> {
+        return attendanceRepository.getAttendanceRecords(monthId, year)
     }
 }

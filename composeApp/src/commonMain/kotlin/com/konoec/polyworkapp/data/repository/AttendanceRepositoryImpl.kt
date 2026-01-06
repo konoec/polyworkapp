@@ -18,11 +18,11 @@ class AttendanceRepositoryImpl(
     private val localDataSource: AuthLocalDataSource
 ) : AttendanceRepository {
 
-    override suspend fun getAttendanceRecords(monthId: Int): Result<Pair<List<AttendanceRecord>, List<Month>>> {
+    override suspend fun getAttendanceRecords(monthId: Int, year: Int): Result<Pair<List<AttendanceRecord>, List<Month>>> {
         val token = localDataSource.getToken().firstOrNull()
             ?: return Result.Error("No token found")
 
-        return when (val result = safeApiCall { remoteDataSource.getAttendanceRecords(token, monthId) }) {
+        return when (val result = safeApiCall { remoteDataSource.getAttendanceRecords(token, monthId, year) }) {
             is Result.Success -> {
                 val response = result.data
                 if (response.header.code == 200) {
