@@ -26,7 +26,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -34,6 +33,66 @@ import com.konoec.polyworkapp.platform.rememberImagePicker
 import com.konoec.polyworkapp.presentation.components.PolyworkLoader
 import com.konoec.polyworkapp.presentation.theme.PolyworkTheme
 import com.konoec.polyworkapp.presentation.ViewModelRegistry
+import kotlinx.datetime.*
+
+/**
+ * Parsea una fecha en formato "DD/MM/YYYY" y retorna el día de la semana abreviado en español
+ */
+private fun getDayOfWeek(dateString: String): String {
+    return try {
+        val parts = dateString.split("/")
+        if (parts.size != 3) return "---"
+
+        val day = parts[0].toIntOrNull() ?: return "---"
+        val month = parts[1].toIntOrNull() ?: return "---"
+        val year = parts[2].toIntOrNull() ?: return "---"
+
+        val localDate = LocalDate(year, month, day)
+        val dayOfWeek = localDate.dayOfWeek
+
+        when (dayOfWeek) {
+            DayOfWeek.MONDAY -> "LUN"
+            DayOfWeek.TUESDAY -> "MAR"
+            DayOfWeek.WEDNESDAY -> "MIE"
+            DayOfWeek.THURSDAY -> "JUE"
+            DayOfWeek.FRIDAY -> "VIE"
+            DayOfWeek.SATURDAY -> "SAB"
+            DayOfWeek.SUNDAY -> "DOM"
+        }
+    } catch (e: Exception) {
+        "---"
+    }
+}
+
+/**
+ * Parsea una fecha en formato "DD/MM/YYYY" y retorna el mes abreviado en español
+ */
+private fun getMonthAbbreviation(dateString: String): String {
+    return try {
+        val parts = dateString.split("/")
+        if (parts.size != 3) return ""
+
+        val month = parts[1].toIntOrNull() ?: return ""
+
+        when (month) {
+            1 -> "ENE"
+            2 -> "FEB"
+            3 -> "MAR"
+            4 -> "ABR"
+            5 -> "MAY"
+            6 -> "JUN"
+            7 -> "JUL"
+            8 -> "AGO"
+            9 -> "SEP"
+            10 -> "OCT"
+            11 -> "NOV"
+            12 -> "DIC"
+            else -> ""
+        }
+    } catch (e: Exception) {
+        ""
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -286,7 +345,41 @@ fun PeriodSummaryCard(
 }
 
 @Composable
-fun AttendanceStreamItem(item: AttendanceItem, onActionClick: () -> Unit) {
+fun EmptyStateContent(screenPadding: Dp) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(screenPadding),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "📋",
+                style = MaterialTheme.typography.displayLarge
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Sin registros",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "No hay asistencias en este periodo",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+fun AttendanceStreamItem(
+    item: AttendanceItem,
+    onActionClick: () -> Unit
+) {
     // Determinar el color según el estado
     val statusColor = when (item.status) {
         AttendanceStatus.ASISTENCIA -> Color(0xFF4ADE80) // Verde
@@ -309,16 +402,27 @@ fun AttendanceStreamItem(item: AttendanceItem, onActionClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Fecha Minimalista
-        Column(modifier = Modifier.width(45.dp)) {
+        Column(
+            modifier = Modifier.width(52.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Text(
                 text = item.date.split("/")[0], // Solo el día
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Light
             )
             Text(
-                text = "LUN", // Deberías pasar el día de la semana calculado
+                text = getDayOfWeek(item.date),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = getMonthAbbreviation(item.date),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontSize = MaterialTheme.typography.labelSmall.fontSize * 0.75
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
             )
         }
 
@@ -359,39 +463,6 @@ fun AttendanceStreamItem(item: AttendanceItem, onActionClick: () -> Unit) {
         // Si es asistencia perfecta, no mostrar nada (queda limpio)
     }
 }
-@Composable
-fun EmptyStateContent(screenPadding: Dp) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(horizontal = screenPadding)
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.AccessTime,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                modifier = Modifier.size(64.dp)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Sin registros de asistencia",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "No hay asistencias registradas para este periodo",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
 
 @Composable
 fun TimelineFormContent(
@@ -403,9 +474,9 @@ fun TimelineFormContent(
     onEvidenceSelected: (fileName: String?, bytes: ByteArray?) -> Unit,
     onSubmit: () -> Unit
 ) {
-    val launchPicker = rememberImagePicker { bytes ->
-        if (bytes != null) {
-            onEvidenceSelected("evidencia.jpg", bytes)
+    val launchPicker = rememberImagePicker { result ->
+        if (result != null) {
+            onEvidenceSelected(result.fileName, result.bytes)
         } else {
             onEvidenceSelected(null, null)
         }
@@ -481,7 +552,7 @@ fun TimelineFormContent(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = evidenceName ?: "Toca para subir foto",
+                    text = evidenceName ?: "Toca para subir foto o PDF",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     color = if (evidenceName != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
