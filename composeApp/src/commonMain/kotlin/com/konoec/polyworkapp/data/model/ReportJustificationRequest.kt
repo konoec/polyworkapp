@@ -7,7 +7,8 @@ data class ReportJustificationRequest(
     val attendanceId: String,
     val description: String,
     val deviceId: String? = null,
-    val evidenceUrl: String? = null
+    val evidenceUrl: String? = null,
+    val motivoId: Int? = null
 )
 
 @Serializable

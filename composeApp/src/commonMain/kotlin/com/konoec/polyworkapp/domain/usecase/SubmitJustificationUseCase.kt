@@ -10,9 +10,11 @@ class SubmitJustificationUseCase(
         attendanceId: String,
         description: String,
         deviceId: String?,
-        imageBytes: ByteArray?
+        imageBytes: ByteArray?,
+        fileName: String?,
+        motivoId: Int?
     ): Result<String> {
-        return attendanceRepository.submitJustification(attendanceId, description, deviceId, imageBytes)
+        return attendanceRepository.submitJustification(attendanceId, description, deviceId, imageBytes, fileName, motivoId)
     }
 }
 

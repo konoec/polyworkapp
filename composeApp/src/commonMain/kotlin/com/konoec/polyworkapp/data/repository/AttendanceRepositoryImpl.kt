@@ -9,6 +9,7 @@ import com.konoec.polyworkapp.domain.model.AttendanceStatus
 import com.konoec.polyworkapp.domain.model.Month
 import com.konoec.polyworkapp.domain.model.Result
 import com.konoec.polyworkapp.domain.repository.AttendanceRepository
+import com.konoec.polyworkapp.domain.repository.MotivoJustificacion
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -79,11 +80,36 @@ class AttendanceRepositoryImpl(
         )
     }
 
+    override suspend fun getMotivosJustificacion(): Result<List<MotivoJustificacion>> {
+        val token = localDataSource.getToken().firstOrNull()
+            ?: return Result.Error("No token found")
+
+        return when (val result = safeApiCall { remoteDataSource.getMotivosJustificacion(token) }) {
+            is Result.Success -> {
+                val response = result.data
+                if (response.header.code == 200) {
+                    val motivos = response.body.map { motivo ->
+                        MotivoJustificacion(
+                            id = motivo.id,
+                            descripcion = motivo.descripcion
+                        )
+                    }
+                    Result.Success(motivos)
+                } else {
+                    Result.Error(response.header.message)
+                }
+            }
+            is Result.Error -> result
+        }
+    }
+
     override suspend fun submitJustification(
         attendanceId: String,
         description: String,
         deviceId: String?,
-        imageBytes: ByteArray?
+        imageBytes: ByteArray?,
+        fileName: String?,
+        motivoId: Int?
     ): Result<String> {
         val token = localDataSource.getToken().firstOrNull()
             ?: return Result.Error("No token found")
@@ -92,10 +118,11 @@ class AttendanceRepositoryImpl(
             attendanceId = attendanceId,
             description = description,
             deviceId = deviceId,
-            evidenceUrl = null // Se usa null cuando se envía archivo binario
+            evidenceUrl = null, // Se usa null cuando se envía archivo binario
+            motivoId = motivoId
         )
 
-        return when (val result = safeApiCall { remoteDataSource.submitJustification(token, request, imageBytes) }) {
+        return when (val result = safeApiCall { remoteDataSource.submitJustification(token, request, imageBytes, fileName) }) {
             is Result.Success -> {
                 val response = result.data
                 if (response.header.code == 200 && response.body.success) {

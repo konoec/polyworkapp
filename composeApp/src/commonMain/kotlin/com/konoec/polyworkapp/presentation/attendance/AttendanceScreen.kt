@@ -6,9 +6,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.CloudUpload
@@ -28,11 +31,14 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.konoec.polyworkapp.platform.FilePickerResult
 import com.konoec.polyworkapp.platform.rememberImagePicker
 import com.konoec.polyworkapp.presentation.components.PolyworkLoader
 import com.konoec.polyworkapp.presentation.theme.PolyworkTheme
 import com.konoec.polyworkapp.presentation.ViewModelRegistry
+import kotlinx.coroutines.launch
 import kotlinx.datetime.*
 
 /**
@@ -191,7 +197,12 @@ fun AttendanceScreen() {
                     justification = state.justificationText,
                     evidenceName = state.evidenceFileName,
                     isSubmitting = state.isSubmitting,
+                    motivosDisponibles = state.motivosJustificacion,
+                    selectedMotivoId = state.selectedMotivoId,
+                    isLoadingMotivos = state.isLoadingMotivos,
+                    errorMessage = state.errorMessage,
                     onTextChange = { viewModel.onJustificationChanged(it) },
+                    onMotivoSelected = { viewModel.onMotivoSelected(it) },
                     onEvidenceSelected = { fileName, bytes ->
                         viewModel.onEvidenceSelected(fileName, bytes)
                     },
@@ -457,38 +468,72 @@ fun AttendanceStreamItem(
         // Estado o botón de acción
         if (shouldShowResolve) {
             TextButton(onClick = onActionClick) {
-                Text("Resolver", style = MaterialTheme.typography.labelLarge, color = Color(0xFFEF4444))
+                Text("Justificar", style = MaterialTheme.typography.labelLarge, color = Color(0xFFEF4444))
             }
         }
         // Si es asistencia perfecta, no mostrar nada (queda limpio)
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimelineFormContent(
     item: AttendanceItem,
     justification: String,
     evidenceName: String?,
     isSubmitting: Boolean,
+    motivosDisponibles: List<com.konoec.polyworkapp.domain.repository.MotivoJustificacion>,
+    selectedMotivoId: Int?,
+    isLoadingMotivos: Boolean,
+    errorMessage: String?,
     onTextChange: (String) -> Unit,
+    onMotivoSelected: (Int?) -> Unit,
     onEvidenceSelected: (fileName: String?, bytes: ByteArray?) -> Unit,
     onSubmit: () -> Unit
 ) {
+    // Estados para el Selector de Motivo (Dropdown)
+    var expanded by remember { mutableStateOf(false) }
+
+    // Encontrar el motivo seleccionado actual
+    val selectedMotivoText = motivosDisponibles.find { it.id == selectedMotivoId }?.descripcion ?: ""
+
+    val scrollState = rememberScrollState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
     val launchPicker = rememberImagePicker { result ->
-        if (result != null) {
-            onEvidenceSelected(result.fileName, result.bytes)
-        } else {
-            onEvidenceSelected(null, null)
+        when (result) {
+            is FilePickerResult.Success -> {
+                onEvidenceSelected(result.fileName, result.bytes)
+            }
+            is FilePickerResult.Error -> {
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = result.message,
+                        duration = SnackbarDuration.Short
+                    )
+                }
+                onEvidenceSelected(null, null)
+            }
+            is FilePickerResult.Cancelled -> {
+                // Usuario canceló, no hacer nada
+            }
         }
     }
 
-    Column(
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Column(
         modifier = Modifier
             .fillMaxWidth()
+            .verticalScroll(scrollState) // Permite scroll si el contenido crece
             .padding(horizontal = 24.dp)
             .padding(bottom = 32.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // --- CABECERA ---
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(top = 16.dp)
+        ) {
             Box(
                 modifier = Modifier
                     .size(48.dp)
@@ -499,23 +544,111 @@ fun TimelineFormContent(
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text("Ticket de Incidencia", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text("Ayúdanos a corregir tu registro del ${item.date}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "Ticket de Justificación",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "Registro del ${item.date}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        Text("1. Descripción del problema", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+        // --- 1. SELECTOR DE MOTIVO (DINÁMICO DESDE BACKEND) ---
+        Text(
+            "1. Motivo de la incidencia",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (isLoadingMotivos) {
+            // Mostrar un indicador de carga mientras se obtienen los motivos
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+            }
+        } else {
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = selectedMotivoText,
+                    onValueChange = {},
+                    readOnly = true,
+                    placeholder = { Text("Selecciona un motivo") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Rounded.List, null) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                    ),
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    isError = errorMessage != null && selectedMotivoId == null
+                )
+
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                ) {
+                    motivosDisponibles.forEach { motivo ->
+                        DropdownMenuItem(
+                            text = { Text(motivo.descripcion, style = MaterialTheme.typography.bodyLarge) },
+                            onClick = {
+                                onMotivoSelected(motivo.id)
+                                expanded = false
+                            },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        )
+                    }
+                }
+            }
+        }
+
+        // Mostrar mensaje de error si existe
+        if (errorMessage != null) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = errorMessage,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // --- 2. DESCRIPCIÓN (OPCIONAL) ---
+        Text(
+            "2. Detalles adicionales (Opcional)",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
             value = justification,
             onValueChange = onTextChange,
-            placeholder = { Text("Ej: Olvidé marcar mi salida porque...") },
+            placeholder = { Text("Describe brevemente lo ocurrido...") },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(100.dp),
+                .height(120.dp),
             shape = RoundedCornerShape(12.dp),
             leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Notes, null) },
             colors = OutlinedTextFieldDefaults.colors(
@@ -526,7 +659,13 @@ fun TimelineFormContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text("2. Evidencia (Opcional)", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+        // --- 3. EVIDENCIA (OPCIONAL) ---
+        Text(
+            "3. Evidencia (Opcional)",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
         Spacer(modifier = Modifier.height(8.dp))
 
         val stroke = Stroke(width = 3f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 20f), 0f))
@@ -535,16 +674,23 @@ fun TimelineFormContent(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp)
+                .height(80.dp)
                 .drawBehind {
                     drawRoundRect(color = borderColor, style = stroke, cornerRadius = CornerRadius(12.dp.toPx()))
                 }
-                .background(if (evidenceName != null) MaterialTheme.colorScheme.primary.copy(alpha=0.05f) else Color.Transparent, RoundedCornerShape(12.dp))
+                .background(
+                    if (evidenceName != null) MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
+                    else Color.Transparent,
+                    RoundedCornerShape(12.dp)
+                )
                 .clip(RoundedCornerShape(12.dp))
                 .clickable { launchPicker() },
             contentAlignment = Alignment.Center
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            ) {
                 Icon(
                     imageVector = if (evidenceName != null) Icons.Outlined.CheckCircle else Icons.Outlined.CloudUpload,
                     contentDescription = null,
@@ -552,7 +698,7 @@ fun TimelineFormContent(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = evidenceName ?: "Toca para subir foto o PDF",
+                    text = evidenceName ?: "Toca para subir una foto o PDF",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     color = if (evidenceName != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
@@ -560,20 +706,37 @@ fun TimelineFormContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(40.dp))
 
+        // --- BOTÓN DE ENVÍO ---
         Button(
             onClick = onSubmit,
-            modifier = Modifier.fillMaxWidth().height(52.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-            enabled = !isSubmitting && justification.isNotEmpty()
+            // El botón se habilita solo si se seleccionó un motivo
+            enabled = !isSubmitting && selectedMotivoId != null
         ) {
             if (isSubmitting) {
-                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                CircularProgressIndicator(
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 3.dp
+                )
             } else {
-                Text("ENVIAR SOLICITUD", fontWeight = FontWeight.Bold)
+                Text("ENVIAR SOLICITUD", fontWeight = FontWeight.ExtraBold, letterSpacing = 1.2.sp)
             }
         }
+    }
+
+        // Snackbar para mostrar errores del selector de archivos
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(16.dp)
+        )
     }
 }

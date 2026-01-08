@@ -3,29 +3,34 @@ package com.konoec.polyworkapp.platform
 import androidx.compose.runtime.Composable
 
 /**
- * Datos del archivo seleccionado
+ * Resultado de la selección de archivo
  */
-data class FilePickerResult(
-    val fileName: String,
-    val bytes: ByteArray
-) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other == null || this::class != other::class) return false
+sealed class FilePickerResult {
+    data class Success(
+        val fileName: String,
+        val bytes: ByteArray
+    ) : FilePickerResult() {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other == null || this::class != other::class) return false
 
-        other as FilePickerResult
+            other as Success
 
-        if (fileName != other.fileName) return false
-        if (!bytes.contentEquals(other.bytes)) return false
+            if (fileName != other.fileName) return false
+            if (!bytes.contentEquals(other.bytes)) return false
 
-        return true
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = fileName.hashCode()
+            result = 31 * result + bytes.contentHashCode()
+            return result
+        }
     }
 
-    override fun hashCode(): Int {
-        var result = fileName.hashCode()
-        result = 31 * result + bytes.contentHashCode()
-        return result
-    }
+    data class Error(val message: String) : FilePickerResult()
+    object Cancelled : FilePickerResult()
 }
 
 /**
@@ -33,6 +38,5 @@ data class FilePickerResult(
  */
 @Composable
 expect fun rememberImagePicker(
-    onFileSelected: (FilePickerResult?) -> Unit
+    onFileSelected: (FilePickerResult) -> Unit
 ): () -> Unit
-

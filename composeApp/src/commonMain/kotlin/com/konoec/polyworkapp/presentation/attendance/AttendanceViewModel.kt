@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.konoec.polyworkapp.di.AppModule
 import com.konoec.polyworkapp.domain.model.Result
 import com.konoec.polyworkapp.domain.usecase.GetAttendanceRecordsUseCase
+import com.konoec.polyworkapp.domain.usecase.GetMotivosJustificacionUseCase
 import com.konoec.polyworkapp.domain.usecase.SubmitJustificationUseCase
 import com.konoec.polyworkapp.platform.DeviceInfo
 import kotlinx.coroutines.channels.Channel
@@ -20,6 +21,7 @@ import com.konoec.polyworkapp.domain.model.AttendanceStatus as DomainAttendanceS
 
 class AttendanceViewModel(
     private val getAttendanceRecordsUseCase: GetAttendanceRecordsUseCase = AppModule.getAttendanceRecordsUseCase,
+    private val getMotivosJustificacionUseCase: GetMotivosJustificacionUseCase = AppModule.getMotivosJustificacionUseCase,
     private val submitJustificationUseCase: SubmitJustificationUseCase = AppModule.submitJustificationUseCase
 ) : ViewModel() {
 
@@ -35,6 +37,7 @@ class AttendanceViewModel(
     init {
         val years = generateYearsList()
         _state.update { it.copy(availableYears = years, selectedYear = currentYear) }
+        loadMotivos()
         loadAttendance()
     }
 
@@ -134,17 +137,51 @@ class AttendanceViewModel(
                 isSheetOpen = true,
                 justificationText = "",
                 evidenceFileName = null,
+                selectedMotivoId = null,
                 errorMessage = null
             )
+        }
+        // Cargar motivos si aún no se han cargado
+        if (_state.value.motivosJustificacion.isEmpty()) {
+            loadMotivos()
         }
     }
 
     fun closeReportSheet() {
-        _state.update { it.copy(isSheetOpen = false, selectedItem = null, errorMessage = null) }
+        _state.update { it.copy(isSheetOpen = false, selectedItem = null, selectedMotivoId = null, errorMessage = null) }
     }
 
     fun onJustificationChanged(text: String) {
         _state.update { it.copy(justificationText = text, errorMessage = null) }
+    }
+
+    fun onMotivoSelected(motivoId: Int?) {
+        _state.update { it.copy(selectedMotivoId = motivoId, errorMessage = null) }
+    }
+
+    private fun loadMotivos() {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoadingMotivos = true) }
+
+            when (val result = getMotivosJustificacionUseCase()) {
+                is Result.Success -> {
+                    _state.update {
+                        it.copy(
+                            motivosJustificacion = result.data,
+                            isLoadingMotivos = false
+                        )
+                    }
+                }
+                is Result.Error -> {
+                    _state.update {
+                        it.copy(
+                            isLoadingMotivos = false,
+                            errorMessage = "No se pudieron cargar los motivos"
+                        )
+                    }
+                }
+            }
+        }
     }
 
     fun onEvidenceSelected(fileName: String?, bytes: ByteArray?) {
@@ -160,9 +197,11 @@ class AttendanceViewModel(
     fun submitReport() {
         val currentItem = _state.value.selectedItem ?: return
         val justification = _state.value.justificationText.trim()
+        val motivoId = _state.value.selectedMotivoId
 
-        if (justification.isEmpty()) {
-            _state.update { it.copy(errorMessage = "Ingresa el motivo/explicación.") }
+        // Validar que se haya seleccionado un motivo
+        if (motivoId == null) {
+            _state.update { it.copy(errorMessage = "Selecciona un motivo de justificación.") }
             return
         }
 
@@ -171,12 +210,15 @@ class AttendanceViewModel(
 
             val deviceId = DeviceInfo.getDeviceId()
             val imageBytes = _state.value.evidenceBytes
+            val fileName = _state.value.evidenceFileName
 
             when (val result = submitJustificationUseCase(
                 attendanceId = currentItem.id,
                 description = justification,
                 deviceId = deviceId,
-                imageBytes = imageBytes
+                imageBytes = imageBytes,
+                fileName = fileName,
+                motivoId = motivoId
             )) {
                 is Result.Success -> {
                     _state.update {
@@ -187,6 +229,7 @@ class AttendanceViewModel(
                             justificationText = "",
                             evidenceFileName = null,
                             evidenceBytes = null,
+                            selectedMotivoId = null,
                             errorMessage = null
                         )
                     }

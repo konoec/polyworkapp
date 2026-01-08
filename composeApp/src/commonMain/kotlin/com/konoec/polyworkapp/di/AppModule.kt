@@ -19,6 +19,7 @@ import com.konoec.polyworkapp.domain.usecase.ChangePasswordUseCase
 import com.konoec.polyworkapp.domain.usecase.GetActiveShiftUseCase
 import com.konoec.polyworkapp.domain.usecase.GetAttendanceRecordsUseCase
 import com.konoec.polyworkapp.domain.usecase.GetCurrentUserUseCase
+import com.konoec.polyworkapp.domain.usecase.GetMotivosJustificacionUseCase
 import com.konoec.polyworkapp.domain.usecase.GetScheduleUseCase
 import com.konoec.polyworkapp.domain.usecase.GetStatsUseCase
 import com.konoec.polyworkapp.domain.usecase.LoginUseCase
@@ -78,8 +79,8 @@ object AppModule {
     val getActiveShiftUseCase by lazy { GetActiveShiftUseCase(homeRepository) }
     val getStatsUseCase by lazy { GetStatsUseCase(homeRepository) }
     val getAttendanceRecordsUseCase by lazy { GetAttendanceRecordsUseCase(attendanceRepository) }
+    val getMotivosJustificacionUseCase by lazy { GetMotivosJustificacionUseCase(attendanceRepository) }
     val submitJustificationUseCase by lazy { SubmitJustificationUseCase(attendanceRepository) }
     val getScheduleUseCase by lazy { GetScheduleUseCase(scheduleRepository) }
 }
-
 

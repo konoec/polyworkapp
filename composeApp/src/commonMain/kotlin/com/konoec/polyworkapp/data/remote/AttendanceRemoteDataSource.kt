@@ -1,6 +1,7 @@
 package com.konoec.polyworkapp.data.remote
 
 import com.konoec.polyworkapp.data.model.AttendanceResponse
+import com.konoec.polyworkapp.data.model.MotivoJustificacionResponse
 import com.konoec.polyworkapp.data.model.ReportJustificationRequest
 import com.konoec.polyworkapp.data.model.ReportJustificationResponse
 import io.ktor.client.call.body
@@ -25,10 +26,17 @@ class AttendanceRemoteDataSource(
         }.body()
     }
 
+    suspend fun getMotivosJustificacion(token: String): MotivoJustificacionResponse {
+        return client.get("$baseUrl/attendance/justification/motives") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+        }.body()
+    }
+
     suspend fun submitJustification(
         token: String,
         request: ReportJustificationRequest,
-        imageBytes: ByteArray?
+        imageBytes: ByteArray?,
+        fileName: String?
     ): ReportJustificationResponse {
         return client.submitFormWithBinaryData(
             url = "$baseUrl/attendance/report",
@@ -39,10 +47,15 @@ class AttendanceRemoteDataSource(
                 })
 
                 // 2. Parte FILE: Binario (Solo si existe)
-                if (imageBytes != null) {
+                if (imageBytes != null && fileName != null) {
+                    // Detectar el tipo de archivo basado en la extensión
+                    val isPdf = fileName.endsWith(".pdf", ignoreCase = true)
+                    val contentType = if (isPdf) "application/pdf" else "image/jpeg"
+                    val safeFileName = fileName.replace("\"", "") // Limpiar comillas
+
                     append("file", imageBytes, Headers.build {
-                        append(HttpHeaders.ContentType, "image/jpeg")
-                        append(HttpHeaders.ContentDisposition, "filename=\"evidencia.jpg\"")
+                        append(HttpHeaders.ContentType, contentType)
+                        append(HttpHeaders.ContentDisposition, "filename=\"$safeFileName\"")
                     })
                 }
             }
