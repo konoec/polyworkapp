@@ -10,23 +10,17 @@ object AppVersion {
     /**
      * Versión completa en formato semántico (e.g., "1.0.0", "1.2.3-beta")
      */
-    const val VERSION_NAME = "1.0.0"
-
-    /**
-     * Versión corta en formato de 2 niveles (e.g., "1.0")
-     * Usada para el login y comunicación con el backend
-     */
-    const val VERSION_SHORT = "1.0"
+    const val VERSION_NAME = "2.0.0"
 
     /**
      * Código de versión interno (se incrementa con cada build)
      */
-    const val VERSION_CODE = 1
+    const val VERSION_CODE = 2
 
     /**
      * Versión mayor (breaking changes)
      */
-    const val MAJOR = 1
+    const val MAJOR = 2
 
     /**
      * Versión menor (nuevas features)
@@ -74,4 +68,3 @@ object AppVersion {
         return SUFFIX.isNotEmpty()
     }
 }
-
