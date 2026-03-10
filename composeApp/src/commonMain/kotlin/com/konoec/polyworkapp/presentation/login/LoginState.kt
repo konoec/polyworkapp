@@ -5,4 +5,5 @@ data class LoginState(
     val password: String = "",
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
+    val carouselIndex: Int = 0, // 0 = contacto, 1 = recordatorio contraseña
 )

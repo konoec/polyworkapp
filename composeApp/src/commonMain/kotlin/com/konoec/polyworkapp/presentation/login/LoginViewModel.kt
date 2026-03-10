@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 class LoginViewModel(
     private val loginUseCase: LoginUseCase = AppModule.loginUseCase
@@ -17,6 +18,18 @@ class LoginViewModel(
 
     private val _state = MutableStateFlow(LoginState())
     val state: StateFlow<LoginState> = _state.asStateFlow()
+
+    init {
+        // Carrusel automático que alterna entre mensajes cada 5 segundos
+        viewModelScope.launch {
+            while (true) {
+                delay(5_000L) // 5 segundos
+                _state.update {
+                    it.copy(carouselIndex = if (it.carouselIndex == 0) 1 else 0)
+                }
+            }
+        }
+    }
 
     fun onDniChange(value: String) {
         // DNI solo números, máximo 8 dígitos

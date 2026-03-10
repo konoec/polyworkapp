@@ -314,10 +314,16 @@ fun HomeScreen(
                             )
                             HomeModuleItem(
                                 title = "Boletas",
-                                desc = "Próximamente",
+                                desc = "Consulta y valida tus boletas",
                                 icon = Icons.AutoMirrored.Outlined.ReceiptLong,
                                 color = MaterialTheme.colorScheme.error,
-                                enabled = false
+                                onClick = {
+                                    navController.navigate(Screen.Payments.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
                             )
                         }
 
@@ -370,10 +376,16 @@ fun HomeScreen(
                         )
                         HomeModuleItem(
                             title = "Boletas",
-                            desc = "Próximamente",
+                            desc = "Consulta y valida tus boletas",
                             icon = Icons.AutoMirrored.Outlined.ReceiptLong,
                             color = MaterialTheme.colorScheme.error,
-                            enabled = false
+                            onClick = {
+                                navController.navigate(Screen.Payments.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
                         )
                     }
                 }

@@ -5,7 +5,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class LoginRequest(
     val dni: String,
-    val clave: String
+    val clave: String,
+    val version: String = "1.0"
 )
 
 

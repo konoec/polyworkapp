@@ -1,15 +1,23 @@
 package com.konoec.polyworkapp.presentation.login
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -20,7 +28,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.rounded.Workspaces // Icono de marca simulado
+import androidx.compose.material.icons.rounded.Workspaces
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -80,8 +88,7 @@ fun LoginScreen(
         color = MaterialTheme.colorScheme.background
     ) {
         Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+            modifier = Modifier.fillMaxSize()
         ) {
             // 1. FONDO AMBIENTAL (Glow Effect)
             // Un degradado radial rojo en la parte superior para dar profundidad
@@ -99,16 +106,21 @@ fun LoginScreen(
                     )
             )
 
-            // 2. CONTENIDO SCROLLEABLE
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .widthIn(max = maxWidth)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = horizontalPadding),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+            // 2. CONTENIDO PRINCIPAL
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
             ) {
+                // 2. CONTENIDO SCROLLEABLE
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .widthIn(max = maxWidth)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = horizontalPadding),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
 
                 // --- LOGO Y MARCA ---
                 Box(
@@ -232,30 +244,102 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(formTopSpacing.coerceAtMost(32.dp)))
 
-                // --- FOOTER ---
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "¿Problemas para ingresar?",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Contactar a Recursos Humanos",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(8.dp) // Aumentar área táctil
-                    )
+                // --- FOOTER CON CARRUSEL ESTABLE Y MINIMALISTA ---
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp)
+                ) {
+                    // 1. Contenedor con ALTURA FIJA para evitar saltos
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(90.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AnimatedContent(
+                            targetState = state.carouselIndex,
+                            transitionSpec = { (
+                                    fadeIn() + slideInHorizontally { it / 2 }).togetherWith(fadeOut() + slideOutHorizontally { -it / 2 }
+                                ) },
+                            label = "CarouselAnimation"
+                            ) { index ->
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 24.dp)
+                            ) {
+                                when (index) {
+                                    0 -> {
+                                        Text(
+                                            text = "¿Problemas para ingresar?",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "rrhh@polybags.pe",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textAlign = TextAlign.Center,
+                                            lineHeight = 16.sp
+                                        )
+                                    }
+                                    1 -> {
+                                        Text(
+                                            text = "Seguridad",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                                text = "Recuerda cambiar tu contraseña periódicamente desde tu perfil.",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                textAlign = TextAlign.Center,
+                                                lineHeight = 16.sp
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
 
-                    // Versión de la app
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Text(
-                        text = "Versión ${AppVersion.VERSION_NAME}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        textAlign = TextAlign.Center
-                    )
+                        // 2. Indicador de puntos (Dots) - Ahora siempre estarán en la misma posición
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(top = 8.dp)
+                        ) {
+                            repeat(2) { i ->
+                                val isSelected = state.carouselIndex == i
+                                Box(
+                                    modifier = Modifier
+                                        .size(if (isSelected) 6.dp else 4.dp)
+                                        .background(
+                                            color = if (isSelected)
+                                                MaterialTheme.colorScheme.primary
+                                            else
+                                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                                            shape = CircleShape
+                                        )
+                                )
+                            }
+                        }
+
+                        // 3. Versión de la app
+                        Spacer(modifier = Modifier.height(32.dp))
+                        Text(
+                            text = "v${AppVersion.VERSION_NAME}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                            letterSpacing = 1.sp
+                        )
+                    }
                 }
 
                 // Espacio extra para scroll en pantallas pequeñas
@@ -264,6 +348,7 @@ fun LoginScreen(
         }
     }
 }
+
 
 // --- COMPONENTE REUTILIZABLE PARA INPUTS ---
 @Composable

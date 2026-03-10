@@ -1,5 +1,6 @@
 package com.konoec.polyworkapp.data.remote
 
+import com.konoec.polyworkapp.AppVersion
 import com.konoec.polyworkapp.data.model.ChangePasswordRequest
 import com.konoec.polyworkapp.data.model.ChangePasswordResponse
 import com.konoec.polyworkapp.data.model.LoginRequest
@@ -21,7 +22,7 @@ class AuthRemoteDataSource(
     suspend fun login(dni: String, password: String): LoginResponse {
         return client.post("$baseUrl/auth/login") {
             contentType(ContentType.Application.Json)
-            setBody(LoginRequest(dni = dni, clave = password))
+            setBody(LoginRequest(dni = dni, clave = password, version = AppVersion.VERSION_SHORT))
         }.body()
     }
 

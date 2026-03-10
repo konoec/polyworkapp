@@ -6,25 +6,31 @@ import com.konoec.polyworkapp.data.local.createDataStorePreferences
 import com.konoec.polyworkapp.data.remote.AttendanceRemoteDataSource
 import com.konoec.polyworkapp.data.remote.AuthRemoteDataSource
 import com.konoec.polyworkapp.data.remote.HomeRemoteDataSource
+import com.konoec.polyworkapp.data.remote.PayslipRemoteDataSource
 import com.konoec.polyworkapp.data.remote.ScheduleRemoteDataSource
 import com.konoec.polyworkapp.data.repository.AttendanceRepositoryImpl
 import com.konoec.polyworkapp.data.repository.AuthRepositoryImpl
 import com.konoec.polyworkapp.data.repository.HomeRepositoryImpl
+import com.konoec.polyworkapp.data.repository.PayslipRepositoryImpl
 import com.konoec.polyworkapp.data.repository.ScheduleRepositoryImpl
 import com.konoec.polyworkapp.domain.repository.AttendanceRepository
 import com.konoec.polyworkapp.domain.repository.AuthRepository
 import com.konoec.polyworkapp.domain.repository.HomeRepository
+import com.konoec.polyworkapp.domain.repository.PayslipRepository
 import com.konoec.polyworkapp.domain.repository.ScheduleRepository
 import com.konoec.polyworkapp.domain.usecase.ChangePasswordUseCase
+import com.konoec.polyworkapp.domain.usecase.DownloadPayslipUseCase
 import com.konoec.polyworkapp.domain.usecase.GetActiveShiftUseCase
 import com.konoec.polyworkapp.domain.usecase.GetAttendanceRecordsUseCase
 import com.konoec.polyworkapp.domain.usecase.GetCurrentUserUseCase
 import com.konoec.polyworkapp.domain.usecase.GetMotivosJustificacionUseCase
+import com.konoec.polyworkapp.domain.usecase.GetPayslipsUseCase
 import com.konoec.polyworkapp.domain.usecase.GetScheduleUseCase
 import com.konoec.polyworkapp.domain.usecase.GetStatsUseCase
 import com.konoec.polyworkapp.domain.usecase.LoginUseCase
 import com.konoec.polyworkapp.domain.usecase.LogoutUseCase
 import com.konoec.polyworkapp.domain.usecase.SubmitJustificationUseCase
+import com.konoec.polyworkapp.domain.usecase.ValidatePayslipUseCase
 
 object AppModule {
 
@@ -35,6 +41,7 @@ object AppModule {
     private val homeRemoteDataSource by lazy { HomeRemoteDataSource() }
     private val attendanceRemoteDataSource by lazy { AttendanceRemoteDataSource() }
     private val scheduleRemoteDataSource by lazy { ScheduleRemoteDataSource() }
+    private val payslipRemoteDataSource by lazy { PayslipRemoteDataSource() }
 
     // Local Data Sources
     private val authLocalDataSource by lazy { AuthLocalDataSource(dataStore) }
@@ -71,6 +78,13 @@ object AppModule {
         )
     }
 
+    val payslipRepository: PayslipRepository by lazy {
+        PayslipRepositoryImpl(
+            remoteDataSource = payslipRemoteDataSource,
+            localDataSource = authLocalDataSource
+        )
+    }
+
     // Use Cases
     val loginUseCase by lazy { LoginUseCase(authRepository) }
     val logoutUseCase by lazy { LogoutUseCase(authRepository) }
@@ -82,5 +96,7 @@ object AppModule {
     val getMotivosJustificacionUseCase by lazy { GetMotivosJustificacionUseCase(attendanceRepository) }
     val submitJustificationUseCase by lazy { SubmitJustificationUseCase(attendanceRepository) }
     val getScheduleUseCase by lazy { GetScheduleUseCase(scheduleRepository) }
+    val getPayslipsUseCase by lazy { GetPayslipsUseCase(payslipRepository) }
+    val downloadPayslipUseCase by lazy { DownloadPayslipUseCase(payslipRepository) }
+    val validatePayslipUseCase by lazy { ValidatePayslipUseCase(payslipRepository) }
 }
-

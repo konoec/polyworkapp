@@ -5,13 +5,14 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.ui.graphics.vector.ImageVector
 
 sealed class Screen(val route: String, val title: String? = null, val icon: ImageVector? = null) {
     object Home : Screen("home", "Inicio", Icons.Default.Home)
     object Attendance : Screen("attendance", "Asistencias", Icons.Default.DateRange)
     object Schedule : Screen("schedule", "Horario", Icons.AutoMirrored.Filled.List)
-    object Payments : Screen("payments", "Boletas", Icons.Default.Person)
+    object Payments : Screen("payments", "Boletas", Icons.AutoMirrored.Outlined.ReceiptLong)
 
     object ReportIssue : Screen("report_issue")
     object Login : Screen("login")
