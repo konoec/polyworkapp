@@ -12,4 +12,3 @@ object ApiConfig {
     const val READ_TIMEOUT = 30_000L
     const val WRITE_TIMEOUT = 30_000L
 }
-
