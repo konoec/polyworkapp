@@ -28,7 +28,7 @@ class PaymentsViewModel(
 
     init {
         val currentYear = getCurrentYear()
-        val years = (2020..currentYear).toList().reversed()
+        val years = (2025..currentYear).toList().reversed()
         _state.update { it.copy(selectedYear = currentYear, availableYears = years) }
         loadPayslips()
     }

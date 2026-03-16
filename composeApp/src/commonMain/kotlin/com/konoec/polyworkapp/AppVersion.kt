@@ -13,6 +13,12 @@ object AppVersion {
     const val VERSION_NAME = "2.0.0"
 
     /**
+     * Versión corta en formato de 2 niveles (e.g., "2.0")
+     * Usada para el login y comunicación con el backend
+     */
+    const val VERSION_SHORT = "2.0"
+
+    /**
      * Código de versión interno (se incrementa con cada build)
      */
     const val VERSION_CODE = 2
